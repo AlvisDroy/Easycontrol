@@ -1,0 +1,38 @@
+name: Build Easycontrol Android App
+
+on:
+  workflow_dispatch:  # 允许手动触发
+
+jobs:
+  build:
+    runs-on: ubuntu-latest
+    
+    steps:
+    - name: Checkout code
+      uses: actions/checkout@v4
+      
+    - name: Set up JDK 17
+      uses: actions/setup-java@v3
+      with:
+        distribution: 'temurin'
+        java-version: '17'
+        
+    - name: Setup Android SDK
+      uses: android-actions/setup-android@v2
+      
+    - name: Grant execute permission for gradlew
+      run: chmod +x ./easycontrol/gradlew
+      
+    - name: Build Debug Version
+      run: |
+        cd easycontrol
+        ./gradlew assembleDebug
+      env:
+        CI: false
+        
+    - name: Upload APK artifact
+      uses: actions/upload-artifact@v4
+      with:
+        name: easycontrol-debug-apk
+        path: easycontrol/app/build/outputs/apk/debug/*.apk
+        retention-days: 7
