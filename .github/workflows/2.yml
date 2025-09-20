@@ -1,0 +1,48 @@
+name: Build Easycontrol Android App
+
+on:
+  workflow_dispatch:  # 允许手动触发
+
+jobs:
+  build:
+    runs-on: ubuntu-latest
+    
+    steps:
+    - name: Checkout code
+      uses: actions/checkout@v4
+      
+    - name: Patch source code to remove activation
+      run: |
+        # 注释掉 ActiveHelper 相关的导入和使用
+        sed -i '/import top.saymzx.easycontrol.app.helper.ActiveHelper;/d' easycontrol/app/src/main/java/top/saymzx/easycontrol/app/ActiveActivity.java
+        sed -i 's/ActiveHelper.active(activeKey)/true/' easycontrol/app/src/main/java/top/saymzx/easycontrol/app/ActiveActivity.java
+        sed -i 's/ActiveHelper.deactivate(AppData.setting.getActiveKey())/true/' easycontrol/app/src/main/java/top/saymzx/easycontrol/app/ActiveActivity.java
+        
+        # 注释掉 R.raw.easycontrol_server 的使用
+        sed -i 's/R.raw.easycontrol_server/0/' easycontrol/app/src/main/java/top/saymzx/easycontrol/app/client/tools/ClientStream.java
+      
+    - name: Set up JDK 17
+      uses: actions/setup-java@v3
+      with:
+        distribution: 'temurin'
+        java-version: '17'
+        
+    - name: Setup Android SDK
+      uses: android-actions/setup-android@v2
+      
+    - name: Grant execute permission for gradlew
+      run: chmod +x ./easycontrol/gradlew
+      
+    - name: Build Debug Version
+      run: |
+        cd easycontrol
+        ./gradlew assembleDebug
+      env:
+        CI: false
+        
+    - name: Upload APK artifact
+      uses: actions/upload-artifact@v4
+      with:
+        name: easycontrol-debug-apk
+        path: easycontrol/app/build/outputs/apk/debug/*.apk
+        retention-days: 7
