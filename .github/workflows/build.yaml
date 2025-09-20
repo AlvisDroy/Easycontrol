@@ -1,0 +1,47 @@
+name: 构建 Easycontrol Android 应用
+
+on:
+  workflow_dispatch:  # 允许手动触发
+    inputs:
+      构建类型:
+        description: '选择构建类型'
+        required: true
+        default: 'debug'
+        type: choice
+        options:
+        - debug
+        - release
+
+jobs:
+  构建:
+    runs-on: ubuntu-latest
+    
+    steps:
+    - name: 检出代码
+      uses: actions/checkout@v4
+      
+    - name: 设置 JDK 17
+      uses: actions/setup-java@v3
+      with:
+        distribution: 'temurin'
+        java-version: '17'
+        
+    - name: 设置 Android SDK
+      uses: android-actions/setup-android@v2
+      
+    - name: 授予 gradlew 执行权限
+      run: chmod +x ./easycontrol/gradlew
+      
+    - name: 使用 Gradle 构建
+      run: |
+        cd easycontrol
+        ./gradlew assemble${{ github.event.inputs.构建类型 == 'release' ? 'Release' : 'Debug' }}
+      env:
+        CI: false  # 禁用CI模式以避免某些检查
+        
+    - name: 上传 APK 产物
+      uses: actions/upload-artifact@v4
+      with:
+        name: easycontrol-${{ github.event.inputs.构建类型 }}-apk
+        path: easycontrol/app/build/outputs/apk/${{ github.event.inputs.构建类型 }}/*.apk
+        retention-days: 7
